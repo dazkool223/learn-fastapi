@@ -4,6 +4,10 @@ app = FastAPI()
 
 books = []
 
+@app.get("/")
+def hello() :
+    return "Hello"
+
 @app.get("/books")
 def get_all_books():
     return {"books": books}
