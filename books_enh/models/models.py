@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import datetime, timezone
 from typing import Optional
 from sqlmodel import Field, SQLModel, Relationship
 
@@ -12,3 +12,4 @@ class Book(SQLModel, table=True):
     published_year: Optional[int] = None
     total_copies: int = Field(default=1)
     available_copies: int = Field(default=1)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
