@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import time
 import logging
 
-from database.db import create_db_and_tables, get_session
+from database.db import create_db_and_tables
 from routers import books
 
 logging.basicConfig(level=logging.INFO)
@@ -23,14 +23,12 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Library Management System",
     description=(
-        "A REST API for managing a library — books, members, and loans. "
+        "A REST API for managing a library"
         "Built with FastAPI + SQLModel + SQLite."
     ),
     version="1.0.0",
     lifespan=lifespan,
 )
-
-# ── Middleware ────────────────────────────────────────────────────────────────
 
 app.add_middleware(
     CORSMiddleware,
@@ -55,12 +53,7 @@ async def log_requests(request, call_next):
     return response
 
 
-# ── Routers ───────────────────────────────────────────────────────────────────
-
 app.include_router(books.router)
-
-
-# ── Root & Stats ──────────────────────────────────────────────────────────────
 
 @app.get("/", tags=["Health"])
 def root():

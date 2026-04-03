@@ -6,7 +6,7 @@ from database.db import get_session
 from models.models import Book
 from schemas.schemas import BookCreate, BookResponse, BookUpdate
 
-router = APIRouter(prefix="/books", tags=["Books"])
+router = APIRouter(prefix="/books")
 
 
 @router.post("/", response_model=BookResponse, status_code=status.HTTP_201_CREATED)
