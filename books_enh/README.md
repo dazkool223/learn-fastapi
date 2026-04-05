@@ -304,39 +304,17 @@ books_enh/
 ├── requirements.txt         # Package dependencies
 ├── .env                     # Environment variables
 ├── core/
-│   ├── __init__.py
-│   ├── config.py           # Configuration management
-│   └── exceptions.py       # Custom exception classes
-├── main.py                  # Application entry point
-├── requirements.txt         # Package dependencies
-├── .env                     # Environment variables
-├── core/
-│   ├── __init__.py
 │   ├── config.py           # Configuration management
 │   └── exceptions.py       # Custom exception classes
 ├── database/
-│   ├── __init__.py
-│   └── db.py               # Database engine & session
-│   ├── __init__.py
 │   └── db.py               # Database engine & session
 ├── models/
-│   ├── __init__.py
-│   └── models.py           # SQLModel ORM definitions
-│   ├── __init__.py
 │   └── models.py           # SQLModel ORM definitions
 ├── schemas/
-│   ├── __init__.py
 │   └── schemas.py          # Pydantic request/response models
 ├── services/
-│   ├── __init__.py
-│   └── book_service.py     # Business logic layer
-│   ├── __init__.py
-│   └── schemas.py          # Pydantic request/response models
-├── services/
-│   ├── __init__.py
 │   └── book_service.py     # Business logic layer
 └── routers/
-    ├── __init__.py
     └── books.py            # API endpoints
 ```
 
