@@ -6,19 +6,18 @@ from database.db import get_session
 from models.models import Book
 from schemas.schemas import BookCreate, BookResponse, BookUpdate
 from services.book_service import BookService
+from core.exceptions import BookNotFoundException
 
 router = APIRouter(prefix="/books")
 
 
 def get_book_service(session: Session = Depends(get_session)) -> BookService:
-    """Dependency that builds a BookService with an injected DB session."""
     return BookService(session)
-
 
 def _get_book(book_id: int, service: BookService) -> Book:
     book = service.get_by_id(book_id)
     if not book:
-        raise HTTPException(status_code=404, detail="Book not found")
+        raise BookNotFoundException()
     return book
 
 
@@ -27,11 +26,7 @@ def create_book(
     data: BookCreate,
     service: BookService = Depends(get_book_service),
 ):
-    try:
-        return service.create(data)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
-
+    return service.create(data)
 
 @router.get("/", response_model=list[BookResponse])
 def list_books(
@@ -66,11 +61,7 @@ def update_book(
     service: BookService = Depends(get_book_service),
 ):
     book = _get_book(book_id, service)
-    try:
-        return service.update(book, data)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-
+    return service.update(book, data)
 
 @router.delete("/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_book(
@@ -78,7 +69,4 @@ def delete_book(
     service: BookService = Depends(get_book_service),
 ):
     book = _get_book(book_id, service)
-    try:
-        service.delete(book)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    service.delete(book)

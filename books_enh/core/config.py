@@ -1,9 +1,9 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
+from typing import Optional
 
 class AppSettings(BaseSettings):
     DEBUG: bool = False
-    DATABASE_URL: str
+    DATABASE_URL: Optional[str] = None
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -12,4 +12,4 @@ class AppSettings(BaseSettings):
     )
 
 
-settings: AppSettings = AppSettings() # type: ignore
+settings: AppSettings = AppSettings()

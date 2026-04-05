@@ -6,7 +6,10 @@ from sqlmodel import SQLModel, Session, create_engine
 from core.config import settings
  
 logger = logging.getLogger(__name__)
- 
+
+if settings.DATABASE_URL == None : 
+    raise ValueError("Database Connection String NOT FOUND")
+
 engine = create_engine(
     settings.DATABASE_URL,
     echo=settings.DEBUG,

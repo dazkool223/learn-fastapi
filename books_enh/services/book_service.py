@@ -3,7 +3,7 @@ from sqlmodel import Session, select, func
 
 from models.models import Book
 from schemas.schemas import BookCreate, BookUpdate
-
+from core.exceptions import DuplicateISBNException
 
 class BookService:
     def __init__(self, session: Session):
@@ -44,7 +44,7 @@ class BookService:
 
     def create(self, data: BookCreate) -> Book:
         if self.get_by_isbn(data.isbn):
-            raise ValueError(f"A book with ISBN '{data.isbn}' already exists")
+            raise DuplicateISBNException(f"Book with ISBN {data.isbn} already exists")
 
         book = Book(
             **data.model_dump(),
@@ -58,15 +58,6 @@ class BookService:
     def update(self, book: Book, data: BookUpdate) -> Book:
         changes = data.model_dump(exclude_unset=True)
 
-        if "total_copies" in changes:
-            delta = changes["total_copies"] - book.total_copies
-            new_available = book.available_copies + delta
-            if new_available < 0:
-                raise ValueError(
-                    "Cannot reduce total_copies below the number currently on loan"
-                )
-            book.available_copies = new_available
-
         for field, value in changes.items():
             setattr(book, field, value)
 
@@ -76,7 +67,5 @@ class BookService:
         return book
 
     def delete(self, book: Book) -> None:
-        if book.available_copies < book.total_copies:
-            raise ValueError("Cannot delete a book while copies are on loan")
         self.session.delete(book)
         self.session.commit()
