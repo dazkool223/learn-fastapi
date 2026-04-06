@@ -12,4 +12,4 @@ class AppSettings(BaseSettings):
     )
 
 
-settings: AppSettings = AppSettings()
+settings: AppSettings = AppSettings() # type - ignore
