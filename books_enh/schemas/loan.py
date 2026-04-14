@@ -29,6 +29,7 @@ class LoanResponse(BaseModel):
 
     @classmethod
     def from_loan(cls, loan) -> "LoanResponse":
+        due = loan.due_date.date() if isinstance(loan.due_date, datetime) else loan.due_date
         return cls(
             id=loan.id,
             book_id=loan.book_id,
@@ -37,7 +38,7 @@ class LoanResponse(BaseModel):
             due_date=loan.due_date,
             returned_at=loan.returned_at,
             is_returned=loan.is_returned,
-            is_overdue=not loan.is_returned and loan.due_date < date.today(),
+            is_overdue=not loan.is_returned and due < date.today(),
             book=loan.book,
             member=loan.member,
         )
