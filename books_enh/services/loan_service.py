@@ -76,6 +76,7 @@ class LoanService:
             )
 
         # Lock the book row before any reads to prevent concurrent oversell
+        # select * from book where id = {data.book_id} for update
         book = self.session.exec(
             select(Book).where(Book.id == data.book_id).with_for_update()
         ).first()
