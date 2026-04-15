@@ -1,4 +1,5 @@
 import logging
+from pydantic import SecretStr
 from typing import AsyncIterator, NoReturn
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import (
@@ -92,12 +93,12 @@ def build_llm_provider(
         base_url = settings.LLM_BASE_URL if provider_name == "openrouter" else None
         chat_model = ChatOpenAI(
             model=model_name,
-            api_key=api_key_val,
+            api_key=SecretStr(api_key_val),
             base_url=base_url,
             temperature=temperature_val,
-            max_tokens=max_tokens_val,
+            max_completion_tokens=max_tokens_val,
             max_retries=settings.LLM_MAX_RETRIES,
-            request_timeout=settings.LLM_REQUEST_TIMEOUT,
+            timeout=settings.LLM_REQUEST_TIMEOUT,
         )
     else:
         raise UnsupportedLLMProviderException(
