@@ -122,3 +122,30 @@ class StorageDeleteException(LibraryException):
 class DatabaseConnectionException(LibraryException):
     status_code = status.HTTP_503_SERVICE_UNAVAILABLE
     detail = "Could not connect to the database"
+
+
+# LLM / Chat Exceptions
+
+class LLMProviderException(LibraryException):
+    status_code = status.HTTP_502_BAD_GATEWAY
+    detail = "LLM provider returned an error"
+
+
+class LLMRateLimitException(LibraryException):
+    status_code = status.HTTP_429_TOO_MANY_REQUESTS
+    detail = "LLM rate limit exceeded — please try again later"
+
+
+class LLMTimeoutException(LibraryException):
+    status_code = status.HTTP_504_GATEWAY_TIMEOUT
+    detail = "LLM request timed out"
+
+
+class LLMConfigurationException(LibraryException):
+    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    detail = "LLM is not configured correctly"
+
+
+class UnsupportedLLMProviderException(LibraryException):
+    status_code = status.HTTP_400_BAD_REQUEST
+    detail = "Unsupported LLM provider"

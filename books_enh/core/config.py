@@ -13,10 +13,20 @@ class AppSettings(BaseSettings):
     MAX_FILE_SIZE_MB: int = 50
     ALLOWED_EXTENSIONS: list[str] = ["pdf"]
     ALLOWED_MIME_TYPES: list[str] = ["application/pdf"]
-    
+
     DEFAULT_LOAN_DAYS: int = 14
     MAX_LOAN_DAYS: int = 30
-    
+
+    # LLM Chat Settings
+    LLM_PROVIDER: str = "openrouter"                # openrouter | openai | anthropic | google
+    LLM_BASE_URL: str = "https://openrouter.ai/api/v1"
+    LLM_MODEL: str = "openai/gpt-4o-mini"
+    LLM_API_KEY: str
+    LLM_TEMPERATURE: float = 0.7
+    LLM_MAX_TOKENS: int = 2048
+    LLM_MAX_RETRIES: int = 3
+    LLM_REQUEST_TIMEOUT: int = 60
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
