@@ -1,5 +1,5 @@
 import logging
-from typing import AsyncIterator
+from typing import AsyncIterator, NoReturn
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import (
     AIMessage,
@@ -42,6 +42,7 @@ class LangChainLLMProvider:
             return self._model.invoke(lc_msgs)
         except Exception as exc:
             _raise_normalised(exc)
+            raise  # This line is unreachable but satisfies type checker
 
     async def ainvoke(self, messages: list[ChatMessage]) -> AIMessage:
         lc_msgs = _to_langchain_messages(messages)
@@ -49,13 +50,14 @@ class LangChainLLMProvider:
             return await self._model.ainvoke(lc_msgs)
         except Exception as exc:
             _raise_normalised(exc)
+            raise  # This line is unreachable but satisfies type checker
 
     async def astream(self, messages: list[ChatMessage]) -> AsyncIterator[str]:
         lc_msgs = _to_langchain_messages(messages)
         try:
             async for chunk in self._model.astream(lc_msgs):
                 if chunk.content:
-                    yield chunk.content
+                    yield str(chunk.content)
         except Exception as exc:
             _raise_normalised(exc)
 
@@ -71,39 +73,38 @@ def build_llm_provider(
 
     Falls back to ``settings.*`` for every parameter that is not supplied.
     """
-    provider = (provider or settings.LLM_PROVIDER).lower().strip()
-    model = model or settings.LLM_MODEL
-    temperature = temperature if temperature is not None else settings.LLM_TEMPERATURE
-    max_tokens = max_tokens if max_tokens is not None else settings.LLM_MAX_TOKENS
-    api_key = api_key or settings.LLM_API_KEY
+    provider_name = (provider or settings.LLM_PROVIDER).lower().strip()
+    model_name = model or settings.LLM_MODEL
+    temperature_val = temperature if temperature is not None else settings.LLM_TEMPERATURE
+    max_tokens_val = max_tokens if max_tokens is not None else settings.LLM_MAX_TOKENS
+    api_key_val = api_key or settings.LLM_API_KEY
 
-    if not api_key:
+    if not api_key_val:
         raise LLMConfigurationException(
-            f"No API key configured for provider '{provider}'. "
+            f"No API key configured for provider '{provider_name}'. "
             "Set LLM_API_KEY in .env or pass it in the request."
         )
 
-    common_kwargs = dict(
-        temperature=temperature,
-        max_tokens=max_tokens,
-        max_retries=settings.LLM_MAX_RETRIES,
-        request_timeout=settings.LLM_REQUEST_TIMEOUT,
-    )
-
     chat_model: BaseChatModel
 
-    if provider in ("openai", "openrouter"):
+    if provider_name in ("openai", "openrouter"):
         from langchain_openai import ChatOpenAI
-        base_url = settings.LLM_BASE_URL if provider == "openrouter" else None
+        base_url = settings.LLM_BASE_URL if provider_name == "openrouter" else None
         chat_model = ChatOpenAI(
-            model=model, api_key=api_key, base_url=base_url, **common_kwargs
+            model=model_name,
+            api_key=api_key_val,
+            base_url=base_url,
+            temperature=temperature_val,
+            max_tokens=max_tokens_val,
+            max_retries=settings.LLM_MAX_RETRIES,
+            request_timeout=settings.LLM_REQUEST_TIMEOUT,
         )
     else:
         raise UnsupportedLLMProviderException(
-            f"Provider '{provider}' is not supported. Choose from: openrouter, openai"
+            f"Provider '{provider_name}' is not supported. Choose from: openrouter, openai"
         )
 
-    return LangChainLLMProvider(chat_model, provider)
+    return LangChainLLMProvider(chat_model, provider_name)
 
 def _to_langchain_messages(messages: list[ChatMessage]) -> list[BaseMessage]:
     """Convert our schema messages to LangChain message objects."""
@@ -114,7 +115,7 @@ def _to_langchain_messages(messages: list[ChatMessage]) -> list[BaseMessage]:
     }
     return [mapping[m.role](content=m.content) for m in messages]
 
-def _raise_normalised(exc: Exception) -> None:
+def _raise_normalised(exc: Exception) -> NoReturn:
     """Map provider SDK errors to our exception hierarchy."""
     msg = str(exc).lower()
     logger.error("LLM provider error: %s", exc)
