@@ -30,6 +30,10 @@ class LangChainLLMProvider:
         self._provider = provider
 
     @property
+    def chat_model(self) -> BaseChatModel:
+        return self._model
+
+    @property
     def model_name(self) -> str:
         return str(getattr(self._model, "model_name", "unknown"))
 

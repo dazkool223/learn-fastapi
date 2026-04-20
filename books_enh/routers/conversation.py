@@ -13,6 +13,7 @@ from services.conversation_service import ConversationService
 from services.context_manager import ContextManager
 from services.chat_service import build_chat_service
 from services.tool_calling_service import ToolCallingService
+from services.langchain_llm_provider import build_llm_provider
 from services.supabase_storage import SupabaseStorageService
 from services.storage import StorageService
 from schemas.chat import ChatRequest
@@ -174,25 +175,29 @@ async def send_message(
     # Determine if we should use tool calling
     if request.enable_tools and conversation.enabled_tools:
         # Use tool calling service
+        llm_provider = build_llm_provider(
+            provider=request.provider,
+            model=request.model,
+            temperature=request.temperature,
+            max_tokens=request.max_tokens,
+        )
         tool_service = ToolCallingService(
             session=session,
             storage=storage,
+            llm_provider=llm_provider,
             enabled_tools=conversation.enabled_tools,
         )
         
         response_content, tool_calls = await tool_service.complete_with_tools(
             messages=context,
-            model=request.model,
-            temperature=request.temperature,
-            max_tokens=request.max_tokens,
         )
         
         assistant_message = service.add_message(
             conversation_id=conversation_id,
             role="assistant",
             content=response_content,
-            model_used=request.model or "default",
-            provider_used="openai",  # Tool calling uses OpenAI-compatible API
+            model_used=llm_provider.model_name,
+            provider_used=llm_provider.provider_name,
             tool_calls=tool_calls,
         )
     else:

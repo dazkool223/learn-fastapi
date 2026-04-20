@@ -4,16 +4,15 @@ Integrates tool execution with conversation flow.
 """
 import json
 import logging
-from typing import Any, Optional
+from typing import Optional
 from sqlmodel import Session
 from langchain_core.messages import AIMessage, ToolMessage
-from langchain_openai import ChatOpenAI
 
 from schemas.chat import ChatMessage
 from services.tools.tool_definitions import LIBRARY_TOOLS, validate_tool_definitions
 from services.tools.tool_executor import ToolExecutor
 from services.storage import StorageService
-from core.config import settings
+from services.langchain_llm_provider import LangChainLLMProvider, _to_langchain_messages
 
 logger = logging.getLogger(__name__)
 
@@ -25,10 +24,12 @@ class ToolCallingService:
         self,
         session: Session,
         storage: StorageService,
+        llm_provider: LangChainLLMProvider,
         enabled_tools: Optional[list[str]] = None,
     ):
         self.session = session
         self.storage = storage
+        self.llm_provider = llm_provider
         self.tool_executor = ToolExecutor(session, storage)
         self.enabled_tools = enabled_tools or []
 
@@ -56,9 +57,6 @@ class ToolCallingService:
     async def complete_with_tools(
         self,
         messages: list[ChatMessage],
-        model: Optional[str] = None,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
     ) -> tuple[str, Optional[list[dict]]]:
         """
         Complete a chat request with tool calling enabled.
@@ -70,14 +68,13 @@ class ToolCallingService:
 
         if not available_tools:
             logger.warning("Tool calling requested but no tools are enabled")
-            return await self._complete_without_tools(messages, model, temperature, max_tokens)
+            return await self._complete_without_tools(messages)
 
-        # Build LangChain ChatOpenAI with tools
-        llm = self._build_llm(model, temperature, max_tokens)
-        llm_with_tools = llm.bind_tools(available_tools)
+        # Bind tools to the underlying LangChain model
+        llm_with_tools = self.llm_provider.chat_model.bind_tools(available_tools)
 
         # Convert to LangChain messages
-        lc_messages = self._to_langchain_messages(messages)
+        lc_messages = _to_langchain_messages(messages)
 
         # Initial LLM call
         ai_message: AIMessage = await llm_with_tools.ainvoke(lc_messages)
@@ -123,51 +120,7 @@ class ToolCallingService:
     async def _complete_without_tools(
         self,
         messages: list[ChatMessage],
-        model: Optional[str] = None,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
     ) -> tuple[str, None]:
         """Fallback to regular completion without tools."""
-        llm = self._build_llm(model, temperature, max_tokens)
-        lc_messages = self._to_langchain_messages(messages)
-        ai_message = await llm.ainvoke(lc_messages)
+        ai_message = await self.llm_provider.ainvoke(messages)
         return str(ai_message.content), None
-
-    def _build_llm(
-        self,
-        model: Optional[str] = None,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
-    ) -> ChatOpenAI:
-        """Build ChatOpenAI instance with configuration."""
-        from pydantic import SecretStr
-
-        model_name = model or settings.LLM_MODEL
-        temp = temperature if temperature is not None else settings.LLM_TEMPERATURE
-        max_tok = max_tokens if max_tokens is not None else settings.LLM_MAX_TOKENS
-
-        # Determine base URL for OpenRouter
-        base_url = None
-        if settings.LLM_PROVIDER.lower() == "openrouter":
-            base_url = settings.LLM_BASE_URL
-
-        return ChatOpenAI(
-            model=model_name,
-            api_key=SecretStr(settings.LLM_API_KEY),
-            base_url=base_url,
-            temperature=temp,
-            max_completion_tokens=max_tok,
-            max_retries=settings.LLM_MAX_RETRIES,
-            timeout=settings.LLM_REQUEST_TIMEOUT,
-        )
-
-    def _to_langchain_messages(self, messages: list[ChatMessage]):
-        """Convert ChatMessage to LangChain messages."""
-        from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-
-        mapping = {
-            "system": SystemMessage,
-            "user": HumanMessage,
-            "assistant": AIMessage,
-        }
-        return [mapping[m.role](content=m.content) for m in messages]
