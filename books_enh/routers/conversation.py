@@ -13,7 +13,8 @@ from services.conversation_service import ConversationService
 from services.context_manager import ContextManager
 from services.chat_service import build_chat_service
 from services.tool_calling_service import ToolCallingService
-from services.supabase_storage import SupabaseStorage
+from services.supabase_storage import SupabaseStorageService
+from services.storage import StorageService
 from schemas.chat import ChatRequest
 
 router = APIRouter(prefix="/conversations", tags=["Conversations"])
@@ -27,8 +28,8 @@ def get_context_manager(session: Session = Depends(get_session)) -> ContextManag
     return ContextManager(session)
 
 
-def get_storage() -> SupabaseStorage:
-    return SupabaseStorage()
+def get_storage() -> SupabaseStorageService:
+    return SupabaseStorageService()
 
 
 @router.post(
@@ -46,13 +47,13 @@ def create_conversation(
     Create a new conversation thread for a user.
     """
     conversation = service.create_conversation(
-        user_id=member_id, title=request.title, metadata=request.metadata, enabled_tools=request.enabled_tools
+        member_id=member_id, title=request.title, metadata=request.metadata, enabled_tools=request.enabled_tools
     )
     return ConversationResponse(
         id=conversation.id,
         member_id=conversation.member_id,
         title=conversation.title,
-        metadata=conversation.metadata,
+        metadata=conversation.conversation_metadata,
         enabled_tools=conversation.enabled_tools,
         created_at=conversation.created_at,
         updated_at=conversation.updated_at,
@@ -80,7 +81,7 @@ def list_conversations(
             id=conv.id,
             member_id=conv.member_id,
             title=conv.title,
-            metadata=conv.metadata,
+            metadata=conv.conversation_metadata,
             enabled_tools=conv.enabled_tools,
             created_at=conv.created_at,
             updated_at=conv.updated_at,
@@ -112,7 +113,7 @@ def get_conversation_history(
             id=conversation.id,
             member_id=conversation.member_id,
             title=conversation.title,
-            metadata=conversation.metadata,
+            metadata=conversation.conversation_metadata,
             enabled_tools=conversation.enabled_tools,
             created_at=conversation.created_at,
             updated_at=conversation.updated_at,
@@ -150,7 +151,7 @@ async def send_message(
     service: ConversationService = Depends(get_conversation_service),
     context_mgr: ContextManager = Depends(get_context_manager),
     session: Session = Depends(get_session),
-    storage: SupabaseStorage = Depends(get_storage),
+    storage: StorageService = Depends(get_storage),
 ) -> MessageResponse:
     """
     Send a message in an existing conversation and get LLM response.
@@ -203,7 +204,10 @@ async def send_message(
             max_tokens=request.max_tokens,
         )
 
-        chat_request = ChatRequest(messages=context)
+        chat_request = ChatRequest(messages=context, provider=request.provider,
+            model=request.model,
+            temperature=request.temperature,
+            max_tokens=request.max_tokens,)
         response = await chat_service.acomplete(chat_request)
 
         assistant_message = service.add_message(
@@ -255,7 +259,7 @@ def update_conversation_tools(
         id=conversation.id,
         member_id=conversation.member_id,
         title=conversation.title,
-        metadata=conversation.metadata,
+        metadata=conversation.conversation_metadata,
         enabled_tools=conversation.enabled_tools,
         created_at=conversation.created_at,
         updated_at=conversation.updated_at,

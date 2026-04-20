@@ -7,7 +7,7 @@ class Conversation(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     member_id: int = Field(foreign_key="member.id", index=True)
     title: str = Field(max_length=255)
-    metadata: Optional[dict] = Field(default=None, sa_column=Column(JSON))
+    conversation_metadata: Optional[dict] = Field(default=None, sa_column=Column(JSON))
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc)
     )
@@ -19,19 +19,19 @@ class Conversation(SQLModel, table=True):
     
     @property
     def enabled_tools(self) -> Optional[list[str]]:
-        """Get enabled_tools from metadata."""
-        if self.metadata:
-            return self.metadata.get("enabled_tools")
+        """Get enabled_tools from conversation_metadata."""
+        if self.conversation_metadata:
+            return self.conversation_metadata.get("enabled_tools")
         return None
     
     def set_enabled_tools(self, tools: Optional[list[str]]) -> None:
-        """Set enabled_tools in metadata."""
-        if self.metadata is None:
-            self.metadata = {}
+        """Set enabled_tools in conversation_metadata."""
+        if self.conversation_metadata is None:
+            self.conversation_metadata = {}
         if tools is not None:
-            self.metadata["enabled_tools"] = tools
-        elif "enabled_tools" in self.metadata:
-            del self.metadata["enabled_tools"]
+            self.conversation_metadata["enabled_tools"] = tools
+        elif "enabled_tools" in self.conversation_metadata:
+            del self.conversation_metadata["enabled_tools"]
 
 
 class Message(SQLModel, table=True):
@@ -42,7 +42,7 @@ class Message(SQLModel, table=True):
     model_used: Optional[str] = Field(default=None, max_length=100)
     provider_used: Optional[str] = Field(default=None, max_length=50)
     token_usage: Optional[dict] = Field(default=None, sa_column=Column(JSON))
-    metadata: Optional[dict] = Field(default=None, sa_column=Column(JSON))
+    message_metadata: Optional[dict] = Field(default=None, sa_column=Column(JSON))
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc)
     )
@@ -51,19 +51,19 @@ class Message(SQLModel, table=True):
     
     @property
     def tool_calls(self) -> Optional[list[dict]]:
-        """Get tool_calls from metadata."""
-        if self.metadata:
-            return self.metadata.get("tool_calls")
+        """Get tool_calls from message_metadata."""
+        if self.message_metadata:
+            return self.message_metadata.get("tool_calls")
         return None
     
     def set_tool_calls(self, calls: Optional[list[dict]]) -> None:
-        """Set tool_calls in metadata."""
-        if self.metadata is None:
-            self.metadata = {}
+        """Set tool_calls in message_metadata."""
+        if self.message_metadata is None:
+            self.message_metadata = {}
         if calls is not None:
-            self.metadata["tool_calls"] = calls
-        elif "tool_calls" in self.metadata:
-            del self.metadata["tool_calls"]
+            self.message_metadata["tool_calls"] = calls
+        elif "tool_calls" in self.message_metadata:
+            del self.message_metadata["tool_calls"]
 
 
 class ConversationSummary(SQLModel, table=True):

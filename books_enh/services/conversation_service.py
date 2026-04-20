@@ -11,7 +11,7 @@ class ConversationService:
         self.session = session
 
     def create_conversation(
-        self, user_id: int, title: str, metadata: Optional[dict] = None, enabled_tools: Optional[list[str]] = None
+        self, member_id: int, title: str, metadata: Optional[dict] = None, enabled_tools: Optional[list[str]] = None
     ) -> Conversation:
         # Merge enabled_tools into metadata
         conv_metadata = metadata or {}
@@ -19,7 +19,7 @@ class ConversationService:
             conv_metadata["enabled_tools"] = enabled_tools
             
         conversation = Conversation(
-            user_id=user_id, title=title, metadata=conv_metadata
+            member_id=member_id, title=title, conversation_metadata=conv_metadata
         )
         self.session.add(conversation)
         self.session.commit()
@@ -71,7 +71,7 @@ class ConversationService:
             model_used=model_used,
             provider_used=provider_used,
             token_usage=token_usage,
-            metadata=msg_metadata,
+            message_metadata=msg_metadata,
         )
         self.session.add(message)
 
@@ -146,14 +146,11 @@ class ConversationService:
         conversation = self.get_conversation(conversation_id, member_id)
         
         # Update metadata with new enabled_tools
-        if conversation.metadata is None:
-            conversation.metadata = {}
+        if conversation.conversation_metadata is None:
+            conversation.conversation_metadata = {}
         
         if enabled_tools is not None and len(enabled_tools) > 0:
-            conversation.metadata["enabled_tools"] = enabled_tools
-        else:
-            # Remove enabled_tools if set to None or empty list
-            conversation.metadata.pop("enabled_tools", None)
+            conversation.conversation_metadata["enabled_tools"] = enabled_tools
         
         conversation.updated_at = datetime.now(timezone.utc)
         self.session.add(conversation)
