@@ -18,7 +18,7 @@ class AppSettings(BaseSettings):
     MAX_LOAN_DAYS: int = 30
 
     # LLM Chat Settings
-    LLM_PROVIDER: str = "openrouter"                # openrouter | openai | anthropic | google
+    LLM_PROVIDER: str = "openrouter"                # openrouter | openai
     LLM_BASE_URL: str = "https://openrouter.ai/api/v1"
     LLM_MODEL: str = "openai/gpt-4o-mini"
     LLM_API_KEY: str
@@ -28,9 +28,9 @@ class AppSettings(BaseSettings):
     LLM_REQUEST_TIMEOUT: int = 60
 
     # Conversation Context Settings
-    CONTEXT_WINDOW_SIZE: int = 20  # Number of recent messages to keep
-    SUMMARIZATION_THRESHOLD: int = 15  # Summarize after every N messages
-    SUMMARY_MODEL: str = "openai/gpt-4o-mini"  # Model for summarization
+    CONTEXT_WINDOW_SIZE: int = 20
+    SUMMARIZATION_THRESHOLD: int = 15
+    SUMMARY_MODEL: str = "openai/gpt-4o-mini"
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -11,10 +11,15 @@ class ConversationService:
         self.session = session
 
     def create_conversation(
-        self, member_id: int, title: str, metadata: Optional[dict] = None
+        self, user_id: int, title: str, metadata: Optional[dict] = None, enabled_tools: Optional[list[str]] = None
     ) -> Conversation:
+        # Merge enabled_tools into metadata
+        conv_metadata = metadata or {}
+        if enabled_tools is not None:
+            conv_metadata["enabled_tools"] = enabled_tools
+            
         conversation = Conversation(
-            member_id=member_id, title=title, conversation_metadata=metadata or {}
+            user_id=user_id, title=title, metadata=conv_metadata
         )
         self.session.add(conversation)
         self.session.commit()
@@ -51,8 +56,14 @@ class ConversationService:
         model_used: Optional[str] = None,
         provider_used: Optional[str] = None,
         token_usage: Optional[dict] = None,
+        tool_calls: Optional[list[dict]] = None,
         metadata: Optional[dict] = None,
     ) -> Message:
+        # Merge tool_calls into metadata
+        msg_metadata = metadata or {}
+        if tool_calls is not None:
+            msg_metadata["tool_calls"] = tool_calls
+            
         message = Message(
             conversation_id=conversation_id,
             role=role,
@@ -60,7 +71,7 @@ class ConversationService:
             model_used=model_used,
             provider_used=provider_used,
             token_usage=token_usage,
-            message_metadata=metadata or {},
+            metadata=msg_metadata,
         )
         self.session.add(message)
 
@@ -127,3 +138,25 @@ class ConversationService:
         conversation = self.get_conversation(conversation_id, member_id)
         self.session.delete(conversation)
         self.session.commit()
+    
+    def update_enabled_tools(
+        self, conversation_id: int, member_id: int, enabled_tools: Optional[list[str]]
+    ) -> Conversation:
+        """Update the enabled_tools for a conversation."""
+        conversation = self.get_conversation(conversation_id, member_id)
+        
+        # Update metadata with new enabled_tools
+        if conversation.metadata is None:
+            conversation.metadata = {}
+        
+        if enabled_tools is not None and len(enabled_tools) > 0:
+            conversation.metadata["enabled_tools"] = enabled_tools
+        else:
+            # Remove enabled_tools if set to None or empty list
+            conversation.metadata.pop("enabled_tools", None)
+        
+        conversation.updated_at = datetime.now(timezone.utc)
+        self.session.add(conversation)
+        self.session.commit()
+        self.session.refresh(conversation)
+        return conversation
