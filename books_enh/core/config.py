@@ -32,6 +32,25 @@ class AppSettings(BaseSettings):
     SUMMARIZATION_THRESHOLD: int = 15
     SUMMARY_MODEL: str = "openai/gpt-4o-mini"
 
+
+    # RAG Embedding Settings
+    EMBEDDING_API_KEY: Optional[str] = None          # Falls back to LLM_API_KEY
+    EMBEDDING_MODEL: str = "text-embedding-3-small"
+    EMBEDDING_BASE_URL: str = "https://api.openai.com/v1"
+    EMBEDDING_DIMENSIONS: int = 1536
+
+    # RAG Chunking Settings
+    RAG_CHUNK_SIZE: int = 1000
+    RAG_CHUNK_OVERLAP: int = 200
+
+    # RAG Retrieval Settings
+    RAG_TOP_K: int = 5
+    RAG_SIMILARITY_THRESHOLD: float = 0.3
+
+    # Vector Store Settings
+    VECTOR_TABLE_NAME: str = "book_chunks"
+    VECTOR_QUERY_FUNCTION: str = "match_book_chunks"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

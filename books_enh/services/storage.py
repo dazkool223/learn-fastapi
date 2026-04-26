@@ -20,6 +20,12 @@ class StorageService(Protocol):
         """
         ...
 
+    def download(self, storage_path: str) -> bytes:
+        """
+        Download raw file bytes from storage.
+        """
+        ...
+
     def get_presigned_url(self, storage_path: str) -> str:
         """
         Return a time-limited URL the client can use to download the file.

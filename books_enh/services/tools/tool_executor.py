@@ -126,25 +126,24 @@ class ToolExecutor:
 
     def _check_availability(self, book_id: int) -> str:
         """Check availability of a specific book using BookService and LoanService."""
-        try:
-            book = self.book_service.get_by_id(book_id)
+        book = self.book_service.get_by_id(book_id)
 
-            response = CheckAvailabilityResult(
-                success=True,
-                book_id=book.id,
-                book_title=book.title,
-                total_copies=book.total_copies,
-                available_copies=book.available_copies,
-                is_available=book.available_copies > 0
-            )
-            return response.model_dump_json()
-
-        except BookNotFoundException:
+        if not book:
             response = CheckAvailabilityResult(
                 success=False,
                 error=f"Book with ID {book_id} not found"
             )
             return response.model_dump_json()
+
+        response = CheckAvailabilityResult(
+            success=True,
+            book_id=book.id,
+            book_title=book.title,
+            total_copies=book.total_copies,
+            available_copies=book.available_copies,
+            is_available=book.available_copies > 0
+        )
+        return response.model_dump_json()
 
     def _get_member_loans(self, member_id: int) -> str:
         """Get all active loans for a member using MemberService and LoanService."""
@@ -174,36 +173,35 @@ class ToolExecutor:
 
     def _get_book_pdf_url(self, book_id: int) -> str:
         """Get presigned URL for book's PDF file using StorageService."""
-        try:
-            book = self.book_service.get_by_id(book_id)
+        book = self.book_service.get_by_id(book_id)
 
-            if not book.file_path:
-                response = BookPDFUrlResult(
-                    success=False,
-                    book_id=book.id,
-                    book_title=book.title,
-                    error=f"Book '{book.title}' does not have a PDF file uploaded"
-                )
-                return response.model_dump_json()
-
-            presigned_url = self.book_service.storage.get_presigned_url(book.file_path)
-
-            response = BookPDFUrlResult(
-                success=True,
-                book_id=book.id,
-                book_title=book.title,
-                url=presigned_url,
-                expires_in=3600,  # 1 hour
-                message=f"Download URL generated for '{book.title}'"
-            )
-            return response.model_dump_json()
-
-        except BookNotFoundException:
+        if not book:
             response = BookPDFUrlResult(
                 success=False,
                 error=f"Book with ID {book_id} not found"
             )
             return response.model_dump_json()
+
+        if not book.file_path:
+            response = BookPDFUrlResult(
+                success=False,
+                book_id=book.id,
+                book_title=book.title,
+                error=f"Book '{book.title}' does not have a PDF file uploaded"
+            )
+            return response.model_dump_json()
+
+        presigned_url = self.book_service.storage.get_presigned_url(book.file_path)
+
+        response = BookPDFUrlResult(
+            success=True,
+            book_id=book.id,
+            book_title=book.title,
+            url=presigned_url,
+            expires_in=3600,  # 1 hour
+            message=f"Download URL generated for '{book.title}'"
+        )
+        return response.model_dump_json()
 
     def _calculate_late_fees(self, member_id: int, fee_per_day: float = 1.0) -> str:
         """Calculate late fees for a member's overdue books."""
@@ -224,7 +222,7 @@ class ToolExecutor:
                     overdue_details.append(
                         LateFeeCalculation(
                             loan_id=loan_resp.id,
-                            book_title=loan_resp.book.title,
+                            book_title=loan_resp.book.title if loan_resp.book else "Unknown",
                             days_overdue=days_overdue,
                             fee_amount=round(fee, 2)
                         )
@@ -268,15 +266,16 @@ class ToolExecutor:
             
             loan_response = self.loan_service.borrow(loan_data)
 
+            book_title = loan_response.book.title if loan_response.book else "Unknown"
             response = CreateLoanResult(
                 success=True,
                 loan_id=loan_response.id,
                 book_id=loan_response.book_id,
-                book_title=loan_response.book.title,
+                book_title=book_title,
                 member_id=loan_response.member_id,
                 borrowed_at=loan_response.borrowed_at,
                 due_date=loan_response.due_date,
-                message=f"Successfully borrowed '{loan_response.book.title}' until {loan_response.due_date.isoformat()}"
+                message=f"Successfully borrowed '{book_title}' until {loan_response.due_date.isoformat()}"
             )
             return response.model_dump_json()
             

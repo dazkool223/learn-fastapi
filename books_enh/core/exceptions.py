@@ -158,3 +158,25 @@ class ConversationNotFoundException(LibraryException):
 class UnauthorizedConversationAccessException(LibraryException):
     status_code = status.HTTP_403_FORBIDDEN
     detail = "You do not have access to this conversation"
+
+
+# RAG Exceptions
+
+class RAGIngestionException(LibraryException):
+    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    detail = "Failed to ingest book for RAG"
+
+
+class RAGQueryException(LibraryException):
+    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    detail = "Failed to query RAG pipeline"
+
+
+class BookNotIngestedException(LibraryException):
+    status_code = status.HTTP_404_NOT_FOUND
+    detail = "Book has not been ingested for RAG queries"
+
+
+class EmbeddingConfigurationException(LibraryException):
+    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    detail = "Embedding service is not configured correctly"

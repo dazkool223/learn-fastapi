@@ -32,6 +32,14 @@ class SupabaseStorageService:
         except Exception as e:
             raise StorageUploadException(f"Failed to upload file to storage: {e}")
 
+
+    def download(self, storage_path: str) -> bytes:
+        """Download raw file bytes from Supabase storage."""
+        try:
+            return self._client.storage.from_(self._bucket).download(storage_path)
+        except Exception as e:
+            raise StorageDeleteException(f"Failed to download file from storage: {e}")
+
     def get_presigned_url(self, storage_path: str) -> str:
         response = self._client.storage.from_(self._bucket).create_signed_url(
             path=storage_path,
