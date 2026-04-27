@@ -5,6 +5,13 @@ from core.exceptions import StorageUploadException, StorageDeleteException
 
 
 class SupabaseStorageService:
+    """Supabase implementation of the StorageService protocol."""
+
+    @property
+    def client(self) -> Client:
+        """Expose the underlying Supabase client for reuse by other Supabase-backed services."""
+        return self._client
+
 
     def __init__(self):
         self._client: Client = create_client(

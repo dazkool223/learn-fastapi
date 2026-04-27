@@ -9,8 +9,11 @@ Two public entry points:
 2. **query(RAGQueryRequest)**
    question → embed → similarity search → build prompt → LLM → answer
 
-All heavy lifting is delegated to specialised sub-services; this
-module only handles coordination and error handling.
+All heavy lifting is delegated to specialised sub-services; this module
+only handles coordination and error handling. The vector backend is
+addressed through the abstract :class:`~services.rag.protocols.VectorStore`
+Protocol so it can be swapped (e.g. Pinecone, Qdrant, Chroma) without
+changing this file.
 """
 import logging
 from datetime import datetime, timezone
@@ -26,7 +29,6 @@ from core.exceptions import (
     RAGIngestionException,
     RAGQueryException,
 )
-from models.book import Book
 from models.book_embedding import BookIngestion, IngestionStatus
 from schemas.chat import ChatMessage
 from schemas.rag import (
@@ -35,12 +37,11 @@ from schemas.rag import (
     RAGQueryRequest,
     RAGQueryResponse,
 )
+from services.book_service import BookService
 from services.langchain_llm_provider import build_llm_provider
 from services.rag.chunking_service import ChunkingService
-from services.rag.embedding_service import EmbeddingService
 from services.rag.pdf_loader import PDFLoaderService
-from services.rag.vector_store_service import VectorStoreService
-from services.storage import StorageService
+from services.rag.protocols import VectorStore
 
 logger = logging.getLogger(__name__)
 
@@ -68,14 +69,16 @@ class RAGService:
     def __init__(
         self,
         session: Session,
-        storage: StorageService,
+        book_service: BookService,
+        pdf_loader: PDFLoaderService,
+        chunker: ChunkingService,
+        vector_store: VectorStore,
     ) -> None:
         self._session = session
-        self._storage = storage
-        self._embedding_svc = EmbeddingService()
-        self._pdf_loader = PDFLoaderService(storage)
-        self._chunker = ChunkingService()
-        self._vector_store = VectorStoreService(self._embedding_svc)
+        self._book_service = book_service
+        self._pdf_loader = pdf_loader
+        self._chunker = chunker
+        self._vector_store = vector_store
 
     # ── Ingestion ────────────────────────────────────────────────────
 
@@ -86,14 +89,14 @@ class RAGService:
     ) -> IngestionStatusResponse:
         """
         Full ingestion pipeline:
-        1. Validate book & file existence
-        2. Download PDF from Supabase Storage
+        1. Validate book & file existence (via BookService)
+        2. Download PDF from storage
         3. Extract text per page (PyPDF)
-        4. Chunk pages with RecursiveCharacterTextSplitter
-        5. Batch-embed & store in pgvector via SupabaseVectorStore
+        4. Chunk pages with the configured TextSplitter
+        5. Batch-embed & store vectors via the VectorStore protocol
         """
-        # 1 ── validate
-        book = self._session.get(Book, book_id)
+        # 1 ── validate (delegate to BookService – single source of truth)
+        book = self._book_service.get_by_id(book_id)
         if not book:
             raise BookNotFoundException()
         if not book.file_path:
@@ -110,7 +113,13 @@ class RAGService:
         ):
             return IngestionStatusResponse.model_validate(ingestion)
 
-        # 3 ── upsert tracking row
+        # 3 ── upsert tracking row and publish PROCESSING state.
+        #
+        # We commit *before* the heavy work so that concurrent callers
+        # of GET /rag/ingest/{id}/status observe the in-progress state
+        # instead of a stale PENDING/COMPLETED row. This is the only
+        # reason we commit twice in this method – the second commit
+        # at the end persists the terminal status.
         if not ingestion:
             ingestion = BookIngestion(
                 book_id=book_id,
@@ -125,7 +134,12 @@ class RAGService:
         self._session.refresh(ingestion)
 
         try:
-            # 4 ── drop stale chunks on re-ingest
+            # 4 ── drop stale chunks on re-ingest.
+            #
+            # SupabaseVectorStore.add_documents performs INSERTs with
+            # newly generated UUIDs – it is *not* an upsert keyed on
+            # metadata. Without this delete, a forced re-ingest would
+            # duplicate every chunk in the table and corrupt retrieval.
             if force:
                 self._vector_store.delete_by_book_id(book_id)
 
@@ -136,7 +150,7 @@ class RAGService:
             chunks = self._chunker.chunk_documents(pages)
             total_stored = self._vector_store.add_documents(chunks)
 
-            # 6 ── mark success
+            # 6 ── mark success (single commit for terminal state)
             ingestion.status = IngestionStatus.COMPLETED
             ingestion.total_chunks = total_stored
             ingestion.total_pages = len(pages)
@@ -158,7 +172,9 @@ class RAGService:
             ingestion.updated_at = datetime.now(timezone.utc)
             self._session.commit()
             logger.error("Ingestion failed for book %d: %s", book_id, exc)
-            raise RAGIngestionException(f"Ingestion failed: {exc}")
+            if isinstance(exc, RAGIngestionException):
+                raise
+            raise RAGIngestionException(f"Ingestion failed: {exc}") from exc
 
     # ── Query ────────────────────────────────────────────────────────
 
@@ -166,10 +182,10 @@ class RAGService:
         """
         RAG query pipeline:
         1. Embed the user question
-        2. Cosine-similarity search in pgvector
+        2. Cosine-similarity search in the vector store
         3. Filter by threshold
         4. Assemble prompt with retrieved context
-        5. Send to LLM (OpenRouter) and return answer + sources
+        5. Send to LLM and return answer + sources
         """
         try:
             # 1 ── optional book filter
@@ -260,7 +276,7 @@ class RAGService:
             raise
         except Exception as exc:
             logger.error("RAG query failed: %s", exc)
-            raise RAGQueryException(f"Query failed: {exc}")
+            raise RAGQueryException(f"Query failed: {exc}") from exc
 
     # ── Status ───────────────────────────────────────────────────────
 

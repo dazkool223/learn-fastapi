@@ -13,19 +13,39 @@ from schemas.rag import (
     RAGQueryRequest,
     RAGQueryResponse,
 )
+from services.book_service import BookService
+from services.rag.chunking_service import ChunkingService
+from services.rag.embedding_service import EmbeddingService
+from services.rag.pdf_loader import PDFLoaderService
+from services.rag.protocols import VectorStore
 from services.rag.rag_service import RAGService
+from services.rag.vector_store_service import SupabaseVectorStoreService
 from services.supabase_storage import SupabaseStorageService, get_storage_service
 
 router = APIRouter(prefix="/rag", tags=["RAG"])
 
 
-# ── Dependency ───────────────────────────────────────────────────────
+# ── Dependency wiring ────────────────────────────────────────────────
 
 def get_rag_service(
     session: Session = Depends(get_session),
     storage: SupabaseStorageService = Depends(get_storage_service),
 ) -> RAGService:
-    return RAGService(session, storage)
+    embedding_svc = EmbeddingService()
+    pdf_loader = PDFLoaderService(storage)
+    chunker = ChunkingService()
+    vector_store: VectorStore = SupabaseVectorStoreService(
+        embedding_service=embedding_svc,
+        client=storage.client,  # reuse the storage service's Supabase client
+    )
+    book_service = BookService(session, storage)
+    return RAGService(
+        session=session,
+        book_service=book_service,
+        pdf_loader=pdf_loader,
+        chunker=chunker,
+        vector_store=vector_store,
+    )
 
 
 # ── Ingestion ────────────────────────────────────────────────────────
@@ -41,9 +61,8 @@ def ingest_book(
     service: RAGService = Depends(get_rag_service),
 ) -> IngestionStatusResponse:
     """
-    Download the book's PDF from Supabase Storage, extract text,
-    chunk it, generate embeddings, and store the vectors in
-    Supabase pgvector for later retrieval.
+    Download the book's PDF, extract text, chunk it, generate embeddings,
+    and store the vectors in the configured vector store.
 
     Set ``force=true`` to re-ingest a book that was already processed.
     """
@@ -77,8 +96,5 @@ async def query_books(
     Embed the question, retrieve the most relevant book chunks via
     cosine similarity, and pass them as context to the LLM for a
     grounded answer.
-
-    Optionally filter by ``book_id`` and tune ``top_k``,
-    ``similarity_threshold``, or LLM parameters per request.
     """
     return await service.query(request)
