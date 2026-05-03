@@ -1,22 +1,20 @@
 """
 Embedding Service
-─────────────────
+
 Backend-agnostic factory around any LangChain ``Embeddings`` implementation.
 
 The concrete provider is selected via ``settings.EMBEDDING_PROVIDER``.
 
 Supported values
-----------------
-* ``openai``       – OpenAI (or any OpenAI-compatible) endpoint via
+
+* ``openai``       - OpenAI (or any OpenAI-compatible) endpoint via
                      ``langchain_openai.OpenAIEmbeddings``.
-* ``openrouter``   – OpenRouter REST API via a custom implementation
+* ``openrouter``   - OpenRouter REST API via a custom implementation
                      (``OpenRouterEmbeddings``) that bypasses the broken
                      token-counting path in ``OpenAIEmbeddings``.
                      See ``services/rag/openrouter_embeddings.py``.
-* ``ollama``       – Local Ollama server via
+* ``ollama``       - Local Ollama server via
                      ``langchain_ollama.OllamaEmbeddings``.
-* ``huggingface``  – HuggingFace sentence-transformers via
-                     ``langchain_huggingface.HuggingFaceEmbeddings``.
 
 Adding a new provider requires only a new branch in
 :meth:`_build_embeddings`. The rest of the RAG pipeline talks to the
@@ -47,14 +45,14 @@ class EmbeddingService:
             settings.EMBEDDING_MODEL,
         )
 
-    # -- factory -------------------------------------------------------
+    # factory
 
     @staticmethod
     def _build_embeddings() -> Embeddings:
         provider = (settings.EMBEDDING_PROVIDER or "openai").lower()
         api_key = settings.EMBEDDING_API_KEY or settings.LLM_API_KEY
 
-        # ── OpenAI (or any OpenAI-compatible endpoint) ─────────────────
+        # OpenAI (or any OpenAI-compatible endpoint)
         if provider == "openai":
             if not api_key:
                 raise EmbeddingConfigurationException(
@@ -69,7 +67,7 @@ class EmbeddingService:
                 dimensions=settings.EMBEDDING_DIMENSIONS,
             )
 
-        # ── OpenRouter ─────────────────────────────────────────────────
+        # OpenRouter 
         # OpenRouter exposes an /embeddings endpoint but the token-count
         # validation inside OpenAIEmbeddings fails against it.
         # We use a thin httpx-based implementation that calls the REST
@@ -87,7 +85,7 @@ class EmbeddingService:
                 base_url=settings.EMBEDDING_BASE_URL,
             )
 
-        # ── Ollama (local) ─────────────────────────────────────────────
+        # Ollama (local)
         if provider == "ollama":
             try:
                 from langchain_ollama import OllamaEmbeddings
@@ -101,23 +99,12 @@ class EmbeddingService:
                 base_url=settings.OLLAMA_BASE_URL,
             )
 
-        # ── HuggingFace ────────────────────────────────────────────────
-        if provider == "huggingface":
-            try:
-                from langchain_huggingface import HuggingFaceEmbeddings
-            except ImportError as exc:
-                raise EmbeddingConfigurationException(
-                    "langchain-huggingface is not installed. "
-                    "Add it to requirements.txt: langchain-huggingface>=0.1.0"
-                ) from exc
-            return HuggingFaceEmbeddings(model_name=settings.EMBEDDING_MODEL)
-
         raise EmbeddingConfigurationException(
             f"Unsupported EMBEDDING_PROVIDER: {provider!r}. "
-            "Valid values: openai, openrouter, ollama, huggingface"
+            "Valid values: openai, openrouter, ollama"
         )
 
-    # -- public helpers ------------------------------------------------
+    # public helpers
 
     @property
     def embeddings(self) -> Embeddings:

@@ -1,6 +1,6 @@
 """
 OpenRouter Embeddings
-─────────────────────
+
 A LangChain-compatible ``Embeddings`` implementation that calls the
 OpenRouter REST API directly.
 
@@ -48,7 +48,7 @@ class OpenRouterEmbeddings(Embeddings):
             self._base_url = f"{self._base_url}/embeddings"
         self._timeout = timeout
 
-    # -- internal ------------------------------------------------------
+    #  internal 
 
     def _embed(self, texts: list[str]) -> list[list[float]]:
         """POST texts to the OpenRouter embeddings endpoint."""
@@ -71,7 +71,7 @@ class OpenRouterEmbeddings(Embeddings):
         items = sorted(data["data"], key=lambda x: x["index"])
         return [item["embedding"] for item in items]
 
-    # -- Embeddings interface ------------------------------------------
+    #  Embeddings interface 
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         """Embed a list of document strings."""

@@ -3,7 +3,7 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 
-# ── Ingestion ──────────────────────────────────────────────
+#  Ingestion 
 
 class IngestionRequest(BaseModel):
     """Request body for triggering book ingestion."""
@@ -27,7 +27,7 @@ class IngestionStatusResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
-# ── RAG Query ──────────────────────────────────────────────
+#  RAG Query 
 
 class RAGQueryRequest(BaseModel):
     """Query the RAG pipeline."""

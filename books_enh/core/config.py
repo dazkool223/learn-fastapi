@@ -34,10 +34,10 @@ class AppSettings(BaseSettings):
 
 
     # RAG Embedding Settings
-    EMBEDDING_PROVIDER: str = "openai"               # openai | openrouter | ollama | huggingface
-    EMBEDDING_API_KEY: Optional[str] = None          # Falls back to LLM_API_KEY
-    EMBEDDING_MODEL: str = "text-embedding-3-small"
-    EMBEDDING_BASE_URL: str = "https://api.openai.com/v1"
+    EMBEDDING_PROVIDER: str = "openrouter"               # openai | openrouter | ollama
+    EMBEDDING_API_KEY: Optional[str] = None
+    EMBEDDING_MODEL: str = "openai/text-embedding-3-small"
+    EMBEDDING_BASE_URL: str = "https://openrouter.ai/api/v1"
     EMBEDDING_DIMENSIONS: int = 1536
 
     # Ollama Settings (used when EMBEDDING_PROVIDER=ollama)

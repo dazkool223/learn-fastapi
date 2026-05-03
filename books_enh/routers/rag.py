@@ -1,6 +1,6 @@
 """
 RAG Router
-──────────
+
 Endpoints for book ingestion and retrieval-augmented generation queries.
 """
 from fastapi import APIRouter, Depends, status
@@ -25,7 +25,7 @@ from services.supabase_storage import SupabaseStorageService, get_storage_servic
 router = APIRouter(prefix="/rag", tags=["RAG"])
 
 
-# ── Dependency wiring ────────────────────────────────────────────────
+#  Dependency wiring 
 
 def get_rag_service(
     session: Session = Depends(get_session),
@@ -48,7 +48,7 @@ def get_rag_service(
     )
 
 
-# ── Ingestion ────────────────────────────────────────────────────────
+# Ingestion 
 
 @router.post(
     "/ingest",
@@ -81,7 +81,7 @@ def get_ingestion_status(
     return service.get_ingestion_status(book_id)
 
 
-# ── Query ────────────────────────────────────────────────────────────
+#  Query 
 
 @router.post(
     "/query",

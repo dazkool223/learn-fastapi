@@ -1,21 +1,8 @@
 """
 Supabase pgvector Vector Store
-──────────────────────────────
+
 Concrete :class:`~services.rag.protocols.VectorStore` implementation
 backed by Supabase pgvector through LangChain's ``SupabaseVectorStore``.
-
-Design notes
-------------
-* The underlying ``SupabaseVectorStore`` is built **once** and cached on
-  the instance – previously a fresh wrapper was instantiated on every
-  call which is wasteful (each one allocates a LangChain runtime, etc.).
-* The Supabase ``Client`` is **injected** (typically via
-  :class:`SupabaseStorageService.client`) so the application authenticates
-  with Supabase exactly once instead of duplicating ``create_client``
-  calls in every Supabase-backed service.
-* All I/O is wrapped in error handling that surfaces a domain-level
-  ``RAGIngestionException`` / ``RAGQueryException`` – the orchestration
-  layer no longer has to guess where a failure came from.
 """
 import json
 import logging
@@ -52,7 +39,7 @@ class SupabaseVectorStoreService:
         # keep a single instance per service.
         self._store: SupabaseVectorStore | None = None
 
-    # -- helpers -------------------------------------------------------
+    # helpers 
 
     def _get_store(self) -> SupabaseVectorStore:
         if self._store is None:
@@ -64,7 +51,7 @@ class SupabaseVectorStoreService:
             )
         return self._store
 
-    # -- write ---------------------------------------------------------
+    # write
 
     def add_documents(
         self,
@@ -75,7 +62,7 @@ class SupabaseVectorStoreService:
         Embed and insert *documents* into the vector store in batches.
 
         NOTE: ``SupabaseVectorStore.add_documents`` performs INSERTs with
-        freshly generated UUIDs – it does *not* upsert by metadata. That
+        freshly generated UUIDs - it does *not* upsert by metadata. That
         is why callers must explicitly :meth:`delete_by_book_id` before
         re-ingesting an existing book; otherwise old chunks remain in
         place alongside the new ones and pollute retrieval results.
@@ -101,8 +88,7 @@ class SupabaseVectorStoreService:
                 f"Failed to store embeddings: {exc}"
             ) from exc
 
-    # -- read ----------------------------------------------------------
-
+    # sread 
     def similarity_search(
         self,
         query: str,
@@ -126,7 +112,7 @@ class SupabaseVectorStoreService:
                 f"Vector store query failed: {exc}"
             ) from exc
 
-    # -- delete --------------------------------------------------------
+    # delete
 
     def delete_by_book_id(self, book_id: int) -> None:
         """Remove every chunk that belongs to *book_id*."""

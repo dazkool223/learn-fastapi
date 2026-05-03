@@ -1,6 +1,6 @@
 """
 RAG Protocols
-─────────────
+
 Backend-agnostic interfaces so RAG orchestration code does not depend on
 any specific vector DB / embedding / splitter implementation.
 """

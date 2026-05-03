@@ -1,6 +1,6 @@
 """
 Chunking Service
-────────────────
+
 Splits per-page Documents into smaller, overlapping chunks.
 
 Splitter selection is pluggable:
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 
 class ChunkingService:
-    """Stateless chunker – one instance can be shared across requests."""
+    """Stateless chunker - one instance can be shared across requests."""
 
     def __init__(
         self,
@@ -39,7 +39,7 @@ class ChunkingService:
         self._chunk_overlap = chunk_overlap or settings.RAG_CHUNK_OVERLAP
         self._splitter: TextSplitter = splitter or self._build_splitter()
 
-    # -- factory -------------------------------------------------------
+    #  factory -
 
     def _build_splitter(self) -> TextSplitter:
         kind = (settings.RAG_SPLITTER_TYPE or "recursive").lower()
@@ -65,7 +65,7 @@ class ChunkingService:
 
         raise ValueError(f"Unsupported RAG_SPLITTER_TYPE: {kind!r}")
 
-    # -- public --------------------------------------------------------
+    #  public 
 
     def chunk_documents(self, documents: list[Document]) -> list[Document]:
         """

@@ -1,6 +1,6 @@
 """
 PDF Loader Service
-──────────────────
+
 Downloads a book's PDF from object storage and extracts text page-by-page
 using PyPDF. Each page becomes a LangChain Document with rich metadata
 that travels through the rest of the RAG pipeline.
@@ -36,7 +36,7 @@ class PDFLoaderService:
         """
         logger.info("Downloading PDF for book %d from %s", book_id, storage_path)
 
-        # -- download ---------------------------------------------------
+        #  download 
         try:
             pdf_bytes: bytes = self._storage.download(storage_path)
         except BookFileNotFoundException:
@@ -47,7 +47,7 @@ class PDFLoaderService:
                 f"Failed to download PDF for book {book_id}: {exc}"
             ) from exc
 
-        # -- parse ------------------------------------------------------
+        #  parse 
         try:
             reader = PdfReader(io.BytesIO(pdf_bytes))
         except PdfReadError as exc:
@@ -59,10 +59,11 @@ class PDFLoaderService:
         total_pages = len(reader.pages)
         documents: list[Document] = []
 
+        # convert into List[Document] from bytes
         for page_num, page in enumerate(reader.pages, start=1):
             try:
                 text = (page.extract_text() or "").strip()
-            except Exception as exc:  # noqa: BLE001 – pypdf raises many types
+            except Exception as exc:  # noqa: BLE001 - pypdf raises many types
                 logger.warning(
                     "Failed to extract text on page %d of book %d: %s",
                     page_num, book_id, exc,

@@ -54,7 +54,7 @@ async def log_requests(request, call_next):
     response = await call_next(request)
     duration_ms = (time.perf_counter() - start) * 1000
     logger.info(
-        "%s %s → %d (%.1fms)",
+        "%s %s -> %d (%.1fms)",
         request.method,
         request.url.path,
         response.status_code,
