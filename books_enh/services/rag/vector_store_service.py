@@ -6,7 +6,6 @@ backed by Supabase pgvector through LangChain's ``SupabaseVectorStore``.
 """
 import json
 import logging
-import uuid
 from typing import Optional
 
 from langchain_core.documents import Document
@@ -83,43 +82,19 @@ class SupabaseVectorStoreService:
         """
         Embed and insert *documents* into the vector store in batches.
 
-        NOTE: This performs INSERTs with freshly generated UUIDs - it does
-        *not* upsert by metadata. Callers must explicitly
-        :meth:`delete_by_book_id` before re-ingesting an existing book;
-        otherwise old chunks remain alongside the new ones and pollute
-        retrieval results.
-
-        Uses the PostgREST client directly to avoid a 404 "Invalid storage
-        request" error that occurs when LangChain's ``SupabaseVectorStore``
-        routes the upsert through the Supabase Storage API instead of the
-        database REST API.
+        NOTE: ``SupabaseVectorStore.add_documents`` performs INSERTs with
+        freshly generated UUIDs - it does *not* upsert by metadata. That
+        is why callers must explicitly :meth:`delete_by_book_id` before
+        re-ingesting an existing book; otherwise old chunks remain in
+        place alongside the new ones and pollute retrieval results.
         """
+        store = self._get_store()
         total_added = 0
 
         try:
             for i in range(0, len(documents), batch_size):
                 batch = documents[i : i + batch_size]
-                texts = [doc.page_content for doc in batch]
-                vectors = self._embedding_service.embed_documents(texts)
-                rows = [
-                    {
-                        "id": str(uuid.uuid4()),
-                        "content": doc.page_content,
-                        "embedding": vector,
-                        "metadata": doc.metadata,
-                    }
-                    for doc, vector in zip(batch, vectors)
-                ]
-                result = (
-                    self._client.table(self._table_name)
-                    .upsert(rows)
-                    .execute()
-                )
-                if not result.data:
-                    raise RAGIngestionException(
-                        "Supabase upsert returned no rows for batch "
-                        f"{i // batch_size + 1}"
-                    )
+                store.add_documents(batch)
                 total_added += len(batch)
                 logger.info(
                     "Stored batch %d: %d / %d chunks",
@@ -128,8 +103,6 @@ class SupabaseVectorStoreService:
                     len(documents),
                 )
             return total_added
-        except RAGIngestionException:
-            raise
         except Exception as exc:
             logger.exception("Vector store insert failed")
             raise RAGIngestionException(
