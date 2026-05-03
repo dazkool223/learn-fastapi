@@ -36,7 +36,6 @@ def get_rag_service(
     chunker = ChunkingService()
     vector_store: VectorStore = SupabaseVectorStoreService(
         embedding_service=embedding_svc,
-        client=storage.client,  # reuse the storage service's Supabase client
     )
     book_service = BookService(session, storage)
     return RAGService(

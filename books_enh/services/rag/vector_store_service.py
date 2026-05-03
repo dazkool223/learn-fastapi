@@ -11,13 +11,34 @@ from typing import Optional
 
 from langchain_core.documents import Document
 from langchain_community.vectorstores import SupabaseVectorStore
-from supabase import Client
+from supabase import Client, create_client
 
 from core.config import settings
 from core.exceptions import RAGIngestionException, RAGQueryException
 from services.rag.embedding_service import EmbeddingService
 
 logger = logging.getLogger(__name__)
+
+
+def _build_postgrest_client() -> Client:
+    """
+    Build a Supabase client pointed at the project base URL so that
+    ``client.table()`` resolves to PostgREST (``/rest/v1/``) instead
+    of the Storage API.
+
+    If ``SUPABASE_URL`` is explicitly set in .env, that value is used.
+    Otherwise the base URL is derived from ``STORAGE_URL`` by removing
+    the ``.storage`` subdomain segment
+    (e.g. ``https://xyz.storage.supabase.co`` -> ``https://xyz.supabase.co``).
+    The key used is ``SUPABASE_SERVICE_KEY`` when set, falling back to
+    ``STORAGE_ACCOUNT_SECRET``.
+    """
+    url = settings.SUPABASE_URL or settings.STORAGE_URL.replace(
+        ".storage.supabase.co", ".supabase.co"
+    )
+    key = settings.SUPABASE_SERVICE_KEY or settings.STORAGE_ACCOUNT_SECRET
+    logger.info("Vector store PostgREST client URL: %s", url)
+    return create_client(url, key)
 
 
 class SupabaseVectorStoreService:
@@ -29,9 +50,9 @@ class SupabaseVectorStoreService:
     def __init__(
         self,
         embedding_service: EmbeddingService,
-        client: Client,
+        client: Client | None = None,
     ) -> None:
-        self._client: Client = client
+        self._client: Client = client or _build_postgrest_client()
         self._embedding_service = embedding_service
         self._table_name = settings.VECTOR_TABLE_NAME
         self._query_function = settings.VECTOR_QUERY_FUNCTION

@@ -52,6 +52,10 @@ class AppSettings(BaseSettings):
     RAG_TOP_K: int = 5
     RAG_SIMILARITY_THRESHOLD: float = 0.3
 
+    # Supabase project base URL for PostgREST / vector store
+    SUPABASE_URL: Optional[str] = None
+    SUPABASE_SERVICE_KEY: Optional[str] = None
+
     # Vector Store Settings
     VECTOR_TABLE_NAME: str = "book_chunks"
     VECTOR_QUERY_FUNCTION: str = "match_book_chunks"
