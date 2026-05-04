@@ -119,14 +119,32 @@ class SupabaseVectorStoreService:
         """
         Embed *query* and return the *top_k* most similar chunks
         together with their cosine-similarity scores.
+
+        Uses a direct Supabase RPC call instead of LangChain's
+        ``similarity_search_with_relevance_scores`` to avoid an
+        incompatibility with supabase-py v2 (``SyncRPCFilterRequestBuilder``
+        no longer exposes ``.params``).
         """
         try:
-            store = self._get_store()
-            return store.similarity_search_with_relevance_scores(
-                query=query,
-                k=top_k,
-                filter=filter or {},
-            )
+            query_embedding = self._embedding_service.embeddings.embed_query(query)
+            rpc_params: dict = {
+                "query_embedding": query_embedding,
+                "match_count": top_k,
+            }
+            if filter:
+                rpc_params["filter"] = filter
+
+            response = self._client.rpc(self._query_function, rpc_params).execute()
+
+            results: list[tuple[Document, float]] = []
+            for row in response.data or []:
+                doc = Document(
+                    page_content=row["content"],
+                    metadata=row.get("metadata") or {},
+                )
+                score: float = float(row.get("similarity", 0.0))
+                results.append((doc, score))
+            return results
         except Exception as exc:
             logger.exception("Vector similarity search failed")
             raise RAGQueryException(
