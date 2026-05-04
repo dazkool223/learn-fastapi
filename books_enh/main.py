@@ -9,8 +9,6 @@ from database.db import verify_connection
 from routers import books, member, loan, chat, conversation, rag
 
 from core.utils import char_streamer
-from fastapi_cache.backends.inmemory import InMemoryBackend
-from fastapi_cache import FastAPICache
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -19,7 +17,6 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting up")
-    FastAPICache.init(InMemoryBackend())
     try:
         verify_connection()
         logger.info("Supabase connection OK.")

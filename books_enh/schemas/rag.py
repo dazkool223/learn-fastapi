@@ -40,8 +40,8 @@ class RAGQueryRequest(BaseModel):
     similarity_threshold: float = Field(default=0.3, ge=0.0, le=1.0)
     # LLM overrides
     model: Optional[str] = None
-    temperature: Optional[float] = Field(default=None, ge=0.0, le=2.0)
-    max_tokens: Optional[int] = Field(default=None, ge=1)
+    temperature: Optional[float] = Field(default=1.0, ge=0.0, le=2.0)
+    max_tokens: Optional[int] = Field(default=100, ge=1)
 
 
 class RAGChunkSource(BaseModel):

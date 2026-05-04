@@ -197,6 +197,7 @@ class RAGService:
                         f"Book {request.book_id} has not been ingested yet"
                     )
                 filter_dict["book_id"] = request.book_id
+            request.model = settings.EMBEDDING_MODEL
 
             # 2  retrieve
             results = self._vector_store.similarity_search(
@@ -255,7 +256,6 @@ class RAGService:
             ]
 
             llm = build_llm_provider(
-                model=request.model,
                 temperature=(
                     request.temperature
                     if request.temperature is not None
